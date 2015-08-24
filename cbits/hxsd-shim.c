@@ -57,27 +57,31 @@ void validityErrorCallback(void * ctx, xmlErrorPtr err) {
 }
 
 SValidationContext* loadSchemaFromFile(char* file_location) {
-  xmlSchemaParserCtxtPtr s_parse_result = NULL;
-  xmlSchemaValidCtxtPtr valid_ctxt = NULL;
-  xmlSchemaPtr s_ptr = NULL;
+  xmlSchemaParserCtxtPtr s_parse_result;
+  xmlSchemaValidCtxtPtr valid_ctxt;
+  xmlSchemaPtr s_ptr;
   SValidationContext* result = NULL;
   s_parse_result = xmlSchemaNewParserCtxt(file_location);
   if (s_parse_result == NULL) {
+          xmlSchemaFreeParserCtxt(s_parse_result);
 	  return NULL;
   }
   result = (SValidationContext*)malloc(sizeof(SValidationContext));
   s_ptr = xmlSchemaParse(s_parse_result);
+  xmlSchemaFreeParserCtxt(s_parse_result);
+  if (s_ptr == NULL) {
+	  free(result);
+	  return NULL;
+  }
   valid_ctxt = xmlSchemaNewValidCtxt(s_ptr);
   result->schema = s_ptr;
   result->schema_validation_context = valid_ctxt;
-  result->schema_parser_context = s_parse_result;
   return result;
 }
 
 void freeSValidationContext(SValidationContext* ctx) {
   xmlSchemaFreeValidCtxt(ctx->schema_validation_context);
   xmlSchemaFree(ctx->schema);
-  xmlSchemaFreeParserCtxt(ctx->schema_parser_context);
   free(ctx);
 }
 

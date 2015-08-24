@@ -11,12 +11,17 @@ typedef struct {
 } SValidationErrors;
 
 typedef struct {
-  xmlSchemaParserCtxtPtr schema_parser_context;
   xmlSchemaValidCtxtPtr schema_validation_context;
   xmlSchemaPtr schema;
 } SValidationContext;
 
 xmlDocPtr parseDocString(char* doc_data, int doc_len);
+
+SValidationContext* loadSchemaFromFile(char* file_location);
+void freeSValidationContext(SValidationContext* ctx);
+
+SValidationErrors* new_schema_validation_errors();
+void free_schema_validation_errors(SValidationErrors* val_struct);
 
 char* hs_get_error_message(SValidationErrors* val_struct, int idx);
 

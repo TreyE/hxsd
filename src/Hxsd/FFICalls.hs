@@ -9,6 +9,7 @@ import Foreign.C.Types
 
 data SchemaValidContext = SchemaValidContext
 type SchemaValidContextPtr = Ptr SchemaValidContext
+type SchemaValidContextFPtr = ForeignPtr SchemaValidContext
 data HXmlDoc = HXmlDoc
 type HXmlDocPtr = Ptr HXmlDoc
 type HXmlDocFPtr = ForeignPtr HXmlDoc
@@ -17,9 +18,13 @@ data SValidationErrors = SValidationErrors
 type SValidationErrorsPtr = Ptr SValidationErrors
 
 foreign import ccall "hxsd-shim.h &xmlFreeDoc" xmlFreeDoc :: FinalizerPtr HXmlDoc
+foreign import ccall "hxsd-shim.h &freeSValidationContext" freeSValidationContext:: FinalizerPtr SchemaValidContext
 foreign import ccall "hxsd-shim.h parseDocString" parseDocString :: CString -> Int -> IO HXmlDocPtr
+foreign import ccall "hxsd-shim.h new_schema_validation_errors" new_schema_validation_errors :: IO SValidationErrorsPtr
+foreign import ccall "hxsd-shim.h free_schema_validation_errors" free_schema_validation_errors :: SValidationErrorsPtr -> IO ()
 foreign import ccall "hxsd-shim.h hs_get_error_count" hs_get_error_count :: SValidationErrorsPtr -> IO CInt
 foreign import ccall "hxsd-shim.h hs_get_error_message" hs_get_error_message :: SValidationErrorsPtr -> CInt -> IO CString
+foreign import ccall "hxsd-shim.h loadSchemaFromFile" loadSchemaFromFile :: CString -> IO SchemaValidContextPtr
 
 parseXmlString :: String -> IO (Maybe HXmlDocFPtr)
 parseXmlString s = do
@@ -29,3 +34,12 @@ parseXmlString s = do
                        return (Nothing)
                     else
                        (newForeignPtr (xmlFreeDoc) dfp) >>= (\x -> return (Just x))
+
+parseSchemaFile :: String -> IO (Maybe SchemaValidContextFPtr)
+parseSchemaFile s = do
+                      cs <- newCString s
+                      dfp <- loadSchemaFromFile cs
+                      if (dfp == nullPtr) then 
+                         return (Nothing)
+                      else
+                         (newForeignPtr (freeSValidationContext) dfp) >>= (\x -> return (Just x))
