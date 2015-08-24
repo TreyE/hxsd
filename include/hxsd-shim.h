@@ -18,4 +18,7 @@ typedef struct {
 
 xmlDocPtr parseDocFile(char* file_uri);
 
+char* hs_get_error_message(SValidationErrors* val_struct, int idx);
+
+int hs_get_error_count(SValidationErrors* val_struct);
 #endif
