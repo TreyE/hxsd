@@ -26,4 +26,5 @@ void free_schema_validation_errors(SValidationErrors* val_struct);
 char* hs_get_error_message(SValidationErrors* val_struct, int idx);
 
 int hs_get_error_count(SValidationErrors* val_struct);
+int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs, xmlDocPtr doc);
 #endif

@@ -22,9 +22,22 @@ foreign import ccall "hxsd-shim.h &freeSValidationContext" freeSValidationContex
 foreign import ccall "hxsd-shim.h parseDocString" parseDocString :: CString -> Int -> IO HXmlDocPtr
 foreign import ccall "hxsd-shim.h new_schema_validation_errors" new_schema_validation_errors :: IO SValidationErrorsPtr
 foreign import ccall "hxsd-shim.h free_schema_validation_errors" free_schema_validation_errors :: SValidationErrorsPtr -> IO ()
-foreign import ccall "hxsd-shim.h hs_get_error_count" hs_get_error_count :: SValidationErrorsPtr -> IO CInt
-foreign import ccall "hxsd-shim.h hs_get_error_message" hs_get_error_message :: SValidationErrorsPtr -> CInt -> IO CString
+foreign import ccall "hxsd-shim.h hs_get_error_count" hs_get_error_count :: SValidationErrorsPtr -> IO Int
+foreign import ccall "hxsd-shim.h hs_get_error_message" hs_get_error_message :: SValidationErrorsPtr -> Int -> IO CString
 foreign import ccall "hxsd-shim.h loadSchemaFromFile" loadSchemaFromFile :: CString -> IO SchemaValidContextPtr
+foreign import ccall "hxsd-shim.h runValidationsAgainstDoc" runValidationsAgainstDoc :: SchemaValidContextPtr -> SValidationErrorsPtr -> HXmlDocPtr -> IO Int
+
+copyErrorsToList :: Int -> SValidationErrorsPtr -> IO [String]
+copyErrorsToList i svep = case i of
+                            0 -> return []
+                            errs -> mapM (\x -> ((hs_get_error_message svep x) >>= peekCString)) ([0..errs])
+
+extractSchemaErrors :: SValidationErrorsPtr -> IO [String]
+extractSchemaErrors svep = do
+                             ec <- hs_get_error_count svep
+                             rv <- copyErrorsToList ec svep
+                             (free_schema_validation_errors svep)
+                             return rv
 
 parseXmlString :: String -> IO (Maybe HXmlDocFPtr)
 parseXmlString s = do
