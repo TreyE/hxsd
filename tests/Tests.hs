@@ -7,11 +7,11 @@ import Test.Framework.Providers.HUnit
 import Hxsd.FFICalls
 
 testLoadXmlDocumentEmpty = TestCase $ do
-                         lxml <- loadXmlFile ""
+                         lxml <- parseXmlString ""
                          assertBool "no file should be nothing" (lxml == Nothing)
 
 testLoadXmlDocument = TestCase $ do
-                         lxml <- loadXmlFile "tests/example.xml"
+                         lxml <- parseXmlString "<root></root>"
                          assertBool "example file should not be nothing" (lxml /= Nothing)
 
 

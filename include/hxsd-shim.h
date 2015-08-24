@@ -16,7 +16,7 @@ typedef struct {
   xmlSchemaPtr schema;
 } SValidationContext;
 
-xmlDocPtr parseDocFile(char* file_uri);
+xmlDocPtr parseDocString(char* doc_data, int doc_len);
 
 char* hs_get_error_message(SValidationErrors* val_struct, int idx);
 

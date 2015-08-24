@@ -8,14 +8,14 @@ int hs_get_error_count(SValidationErrors* val_struct) {
   return(val_struct->error_size);
 }
 
-xmlDocPtr parseDocFile(char* file_uri) {
-  xmlParserCtxtPtr xml_p_ctxt = NULL;
-  xmlDocPtr doc_ptr = NULL;
-  xml_p_ctxt = xmlNewParserCtxt();
-  xmlInitParserCtxt(xml_p_ctxt);
-  doc_ptr = xmlCtxtReadFile(xml_p_ctxt, file_uri, "UTF-8", 0);
-  xmlFreeParserCtxt(xml_p_ctxt);
-  return doc_ptr;
+xmlDocPtr parseDocString(char* doc_data, int doc_len) {
+  xmlDocPtr docPtr;
+  docPtr = xmlReadMemory(doc_data, doc_len, NULL, NULL, 0);
+  if (docPtr == NULL) {
+          xmlFreeDoc(docPtr);
+	  return NULL;
+  }
+  return docPtr;
 }
 
 SValidationErrors* new_schema_validation_errors() {
