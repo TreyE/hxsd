@@ -39,20 +39,20 @@ extractSchemaErrors svep = do
                              (free_schema_validation_errors svep)
                              return rv
 
-parseXmlString :: String -> IO (Maybe HXmlDocFPtr)
+parseXmlString :: String -> IO (XmlParsingResult HXmlDocFPtr)
 parseXmlString s = do
                     (cs,l) <- newCStringLen s
                     dfp <- parseDocString cs l
                     if (dfp == nullPtr) then 
-                       return (Nothing)
+                       return (Left (XmlParsingFailure))
                     else
-                       (newForeignPtr (xmlFreeDoc) dfp) >>= (\x -> return (Just x))
+                       (newForeignPtr (xmlFreeDoc) dfp) >>= (\x -> return (Right x))
 
-parseSchemaFile :: String -> IO (Maybe SchemaValidContextFPtr)
+parseSchemaFile :: String -> IO (SchemaLoadResult SchemaValidContextFPtr)
 parseSchemaFile s = do
                       cs <- newCString s
                       dfp <- loadSchemaFromFile cs
                       if (dfp == nullPtr) then 
-                         return (Nothing)
+                         return (Left SchemaLoadFailure)
                       else
-                         (newForeignPtr (freeSValidationContext) dfp) >>= (\x -> return (Just x))
+                         (newForeignPtr (freeSValidationContext) dfp) >>= (\x -> return (Right x))
