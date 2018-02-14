@@ -5,4 +5,10 @@
 			<xs:minLength value="1"/>
 		</xs:restriction>
 	</xs:simpleType>
+	<xs:complexType name="PersonNameType">
+		<xs:sequence>
+			<xs:element name="first_name" type="nonEmptyString" minOccurs="1"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="person_name" type="PersonNameType"/>
 </xs:schema>

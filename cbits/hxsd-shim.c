@@ -32,6 +32,10 @@ void free_schema_validation_errors(SValidationErrors* val_struct) {
 	free(val_struct);
 }
 
+/*
+ * We need to make a copy of the string pointer -
+ * it will go away when we free the context
+ */
 void add_error_to_context(SValidationErrors* valErrors, const char* err) {
   int error_count = valErrors->error_size;
   char** all_errors = valErrors->errors;
