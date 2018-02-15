@@ -11,7 +11,6 @@ typedef struct {
 } SValidationErrors;
 
 typedef struct {
-  xmlSchemaValidCtxtPtr schema_validation_context;
   xmlSchemaPtr schema;
 } SValidationContext;
 

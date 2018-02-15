@@ -77,42 +77,21 @@ SValidationContext* loadSchemaFromFile(char* file_location) {
 	  free(result);
 	  return NULL;
   }
-  valid_ctxt = xmlSchemaNewValidCtxt(s_ptr);
   result->schema = s_ptr;
-  result->schema_validation_context = valid_ctxt;
   return result;
 }
 
 void freeSValidationContext(SValidationContext* ctx) {
-  xmlSchemaFreeValidCtxt(ctx->schema_validation_context);
   xmlSchemaFree(ctx->schema);
   free(ctx);
 }
 
 int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs, xmlDocPtr doc) {
   int res;
-  xmlSchemaSetValidStructuredErrors(v_ctx->schema_validation_context, &validityErrorCallback, (void *)errs);
-  res = xmlSchemaValidateDoc(v_ctx->schema_validation_context,doc);
+  xmlSchemaValidCtxtPtr schema_validation_context;
+  schema_validation_context = xmlSchemaNewValidCtxt(v_ctx->schema);
+  xmlSchemaSetValidStructuredErrors(schema_validation_context, &validityErrorCallback, (void *)errs);
+  res = xmlSchemaValidateDoc(schema_validation_context,doc);
+  xmlSchemaFreeValidCtxt(schema_validation_context);
   return res;
 }
-
-/*
-int main(int arc, char ** argc) {
-  char* schema_url = "/Users/tevans/proj/cv/vocabulary.xsd";
-  SValidationContext* s_context = loadSchemaFromFile(schema_url);
-  SValidationErrors* vals = new_schema_validation_errors();
-  xmlDocPtr xd_ptr = NULL;
-  xd_ptr = parseDocFile("example.xml");
-  if (xd_ptr == NULL) {
-    printf("FAILED TO LOAD\n");
-    return -1;
-  }
-  runValidationsAgainstDoc(s_context, vals, xd_ptr);
-  for (int i = 0; i <= (vals->error_size - 1); i++) {
-    printf("%s\n", vals->errors[i]);
-  }
-  free_schema_validation_errors(vals);
-  freeSValidationContext(s_context);
-  return 0;
-}
-*/
