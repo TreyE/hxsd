@@ -14,6 +14,11 @@ typedef struct {
   xmlSchemaPtr schema;
 } SValidationContext;
 
+typedef struct {
+  xmlParserInputBuffer* buff;
+  xmlCharEncoding enc;
+} XMLParseBuffer;
+
 xmlDocPtr parseDocString(char* doc_data, int doc_len);
 
 SValidationContext* loadSchemaFromFile(char* file_location);
@@ -26,4 +31,9 @@ char* hs_get_error_message(SValidationErrors* val_struct, int idx);
 
 int hs_get_error_count(SValidationErrors* val_struct);
 int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs, xmlDocPtr doc);
+
+XMLParseBuffer * newXMLParseBufferFromHaskellMem(const char * mem, int size);
+XMLParseBuffer * newXMLParseBufferFromFilePath(const char * path);
+void freeXMLParseBuffer(XMLParseBuffer* buf);
+int runValidationsAgainstSAX(SValidationContext* v_ctx, SValidationErrors* errs, XMLParseBuffer* buff);
 #endif

@@ -95,3 +95,55 @@ int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs,
   xmlSchemaFreeValidCtxt(schema_validation_context);
   return res;
 }
+
+void freeXMLParseBuffer(XMLParseBuffer* buf) {
+  xmlFreeParserInputBuffer(buf->buff);
+  free(buf);
+}
+
+XMLParseBuffer * newXMLParseBuffer() {
+	XMLParseBuffer *xml_parse_buffer;
+	xml_parse_buffer = (XMLParseBuffer*)malloc(sizeof(XMLParseBuffer));
+        xml_parse_buffer->enc = XML_CHAR_ENCODING_UTF8;
+	return xml_parse_buffer;
+}
+
+XMLParseBuffer * newXMLParseBufferFromHaskellMem(const char * mem, int size) {
+	XMLParseBuffer *xml_parse_buffer;
+	xmlParserInputBuffer* buff;
+	xml_parse_buffer = newXMLParseBuffer();
+	buff = xmlParserInputBufferCreateStatic(mem, size, xml_parse_buffer-> enc);
+        if (buff == NULL) {
+		free(xml_parse_buffer);
+		return NULL;
+	}
+	xml_parse_buffer->buff = buff;
+	return xml_parse_buffer;
+}
+
+XMLParseBuffer * newXMLParseBufferFromFilePath(const char * path) {
+	XMLParseBuffer *xml_parse_buffer;
+	xmlParserInputBuffer* buff;
+	xml_parse_buffer = newXMLParseBuffer();
+	buff = xmlParserInputBufferCreateFilename(path, xml_parse_buffer->enc);
+        if (buff == NULL) {
+		free(xml_parse_buffer);
+		return NULL;
+	}
+	xml_parse_buffer->buff = buff;
+	return xml_parse_buffer;
+}
+
+int runValidationsAgainstSAX(SValidationContext* v_ctx, SValidationErrors* errs, XMLParseBuffer* buff) {
+  int res;
+  xmlSAXHandlerPtr saxHandler;
+  xmlSchemaValidCtxtPtr schema_validation_context;
+  saxHandler = (xmlSAXHandlerPtr)malloc(sizeof(xmlSAXHandler));
+  schema_validation_context = xmlSchemaNewValidCtxt(v_ctx->schema);
+  xmlSAX2InitDefaultSAXHandler(saxHandler, 0);
+  saxHandler->serror = &validityErrorCallback;
+  res = xmlSchemaValidateStream(schema_validation_context, buff->buff, buff->enc, saxHandler, (void *)errs);
+  xmlSchemaFreeValidCtxt(schema_validation_context);
+  free(saxHandler);
+  return res;
+}

@@ -14,6 +14,10 @@ data HXmlDoc = HXmlDoc
 type HXmlDocPtr = Ptr HXmlDoc
 type HXmlDocFPtr = ForeignPtr HXmlDoc
 
+data XmlParseBuffer = XmlParseBuffer
+type XmlParseBufferPtr = Ptr XmlParseBuffer
+type XmlParseBufferFPtr = ForeignPtr XmlParseBuffer
+
 data SValidationErrors = SValidationErrors
 type SValidationErrorsPtr = Ptr SValidationErrors
 
@@ -26,6 +30,10 @@ foreign import ccall "hxsd-shim.h hs_get_error_count" hs_get_error_count :: SVal
 foreign import ccall "hxsd-shim.h hs_get_error_message" hs_get_error_message :: SValidationErrorsPtr -> Int -> IO CString
 foreign import ccall "hxsd-shim.h loadSchemaFromFile" loadSchemaFromFile :: CString -> IO SchemaValidContextPtr
 foreign import ccall "hxsd-shim.h runValidationsAgainstDoc" runValidationsAgainstDoc :: SchemaValidContextPtr -> SValidationErrorsPtr -> HXmlDocPtr -> IO Int
+foreign import ccall "hxsd-shim.h &freeXMLParseBuffer" free_xml_parse_buffer :: FinalizerPtr XmlParseBuffer
+foreign import ccall "hxsd-shim.h newXMLParseBufferFromFilePath" new_xml_parse_buffer_from_file_path :: CString -> IO XmlParseBufferPtr
+foreign import ccall "hxsd-shim.h newXMLParseBufferFromHaskellMem" new_xml_parse_buffer_from_string :: CString -> Int -> IO XmlParseBufferPtr
+foreign import ccall "hxsd-shim.h runValidationsAgainstSAX" runValidationsAgainstSAX :: SchemaValidContextPtr -> SValidationErrorsPtr -> XmlParseBufferPtr -> IO Int
 
 copyErrorsToList :: Int -> SValidationErrorsPtr -> IO [String]
 copyErrorsToList i svep = case i of
@@ -44,6 +52,24 @@ throwAwayValidationErrors :: SValidationErrorsPtr -> IO ()
 throwAwayValidationErrors ve = do
                                  finalPtr <- (newForeignPtr (free_schema_validation_errors) ve)
                                  finalizeForeignPtr finalPtr
+
+parseStreamingXmlPath :: String -> IO (XmlParsingResult XmlParseBufferFPtr)
+parseStreamingXmlPath fpath = do
+                                cs <- newCString fpath
+                                pBuffer <- new_xml_parse_buffer_from_file_path cs
+                                if (pBuffer == nullPtr) then
+                                  return (Left (XmlParsingFailure))
+                                else
+                                  (newForeignPtr (free_xml_parse_buffer) pBuffer) >>= (\x -> return (Right x))
+
+parseStreamingXmlString :: String -> IO (XmlParsingResult XmlParseBufferFPtr)
+parseStreamingXmlString s = do
+                                (cs, l) <- newCStringLen s
+                                pBuffer <- new_xml_parse_buffer_from_string cs l
+                                if (pBuffer == nullPtr) then
+                                  return (Left (XmlParsingFailure))
+                                else
+                                  (newForeignPtr (free_xml_parse_buffer) pBuffer) >>= (\x -> return (Right x))
 
 parseXmlString :: String -> IO (XmlParsingResult HXmlDocFPtr)
 parseXmlString s = do
@@ -70,3 +96,12 @@ validateXmlAgainstSchema sc xdoc = do
                                      case validate_result of
                                        0 -> (throwAwayValidationErrors errs_context) >>= (\x -> return XmlIsSchemaValid)
                                        _ -> (extractSchemaErrors errs_context) >>= (\x -> return (XmlFailsSchemaValidation x))
+
+validateSAXAgainstSchema :: SchemaValidContextFPtr -> XmlParseBufferFPtr -> IO XmlSchemaValidationResult
+validateXmlAgainstSax sc xbuffer = do
+                                     errs_context <- new_schema_validation_errors
+                                     validate_result <- withForeignPtr sc (\s -> withForeignPtr xbuffer (\d -> runValidationsAgainstSAX s errs_context d))
+                                     case validate_result of
+                                       0 -> (throwAwayValidationErrors errs_context) >>= (\x -> return XmlIsSchemaValid)
+                                       _ -> (extractSchemaErrors errs_context) >>= (\x -> return (XmlFailsSchemaValidation x))
+validateSAXAgainstSchema = undefined
