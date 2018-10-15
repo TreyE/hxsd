@@ -12,14 +12,12 @@ testBadRootDocFailsValidation = TestCase $ do
                                   (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
                                   (Right lxml) <- parseXmlString "<root></root>"
                                   (XmlFailsSchemaValidation errs) <- validateXmlAgainstSchema lxsd lxml
-                                  putStrLn (show errs)
                                   assertBool "should have errors" (errs /= [])
 
 testBadRootDocFailsSAXValidation = TestCase $ do
                                   (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
                                   (Right lxml) <- parseStreamingXmlString "<root></root>"
                                   (XmlFailsSchemaValidation errs) <- validateSAXAgainstSchema lxsd lxml
-                                  putStrLn (show errs)
                                   assertBool "should have errors" (errs /= [])
 
 testLoadXmlDocumentEmpty = TestCase $ do

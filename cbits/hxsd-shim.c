@@ -59,22 +59,6 @@ void add_error_to_context(SValidationErrors* valErrors, const char* err) {
   }
 }
 
-void validityErrorCallbackSAX(void * ctx, const char *format, ...) {
-  char * buff;
-  int result_size;
-  int written_size;
-  va_list args, args_2;
-  va_start(args, format);
-  va_copy(args_2, args);
-  result_size = vsnprintf(NULL, 0, format, args);
-  buff = malloc(result_size + 1);
-  written_size = vsnprintf(buff, result_size + 1, format, args_2);
-  va_end(args);
-  va_end(args_2);
-  add_error_to_context((SValidationErrors*)ctx, buff);
-  free(buff);
-}
-
 void validityErrorCallback(void * ctx, xmlErrorPtr err) {
   add_error_to_context((SValidationErrors*)ctx, err->message);
 }
@@ -156,7 +140,7 @@ XMLParseBuffer * newXMLParseBufferFromFilePath(const char * path) {
 	return xml_parse_buffer;
 }
 
-static xmlSAXHandler emptySAXHandlerStruct = {
+xmlSAXHandler emptySAXHandlerStruct = {
     NULL, /* internalSubset */
     NULL, /* isStandalone */
     NULL, /* hasInternalSubset */
@@ -197,11 +181,10 @@ int runValidationsAgainstSAX(SValidationContext* v_ctx, SValidationErrors* errs,
   xmlSchemaValidCtxtPtr schema_validation_context;
   schema_validation_context = xmlSchemaNewValidCtxt(v_ctx->schema);
   saxHandler = &emptySAXHandlerStruct;
-  xmlSchemaSetValidErrors(schema_validation_context, &validityErrorCallbackSAX, &validityErrorCallbackSAX, errs);
+  xmlSchemaSetValidStructuredErrors(schema_validation_context, &validityErrorCallback, (void *)errs);
   // Consumes the buffer, so we don't need to free it.
   res = xmlSchemaValidateStream(schema_validation_context, buff->buff, buff->enc, saxHandler, (void *)errs);
   buff->not_read = 0;
-
   xmlSchemaFreeValidCtxt(schema_validation_context);
   return res;
 }
