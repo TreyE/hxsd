@@ -6,11 +6,20 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Hxsd.FFICalls
 import Hxsd.Types
+import Control.Exception(try, displayException, IOException, SomeException)
 
 testBadRootDocFailsValidation = TestCase $ do
                                   (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
                                   (Right lxml) <- parseXmlString "<root></root>"
                                   (XmlFailsSchemaValidation errs) <- validateXmlAgainstSchema lxsd lxml
+                                  putStrLn (show errs)
+                                  assertBool "should have errors" (errs /= [])
+
+testBadRootDocFailsSAXValidation = TestCase $ do
+                                  (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
+                                  (Right lxml) <- parseStreamingXmlString "<root></root>"
+                                  (XmlFailsSchemaValidation errs) <- validateSAXAgainstSchema lxsd lxml
+                                  putStrLn (show errs)
                                   assertBool "should have errors" (errs /= [])
 
 testLoadXmlDocumentEmpty = TestCase $ do
@@ -19,6 +28,10 @@ testLoadXmlDocumentEmpty = TestCase $ do
 
 testLoadXmlDocument = TestCase $ do
                          lxml <- parseXmlString "<root></root>"
+                         assertBool "example file should parse" (lxml /= (Left XmlParsingFailure))
+
+testLoadXmlDocumentSAXString = TestCase $ do
+                         lxml <- parseStreamingXmlString "<root></root>"
                          assertBool "example file should parse" (lxml /= (Left XmlParsingFailure))
 
 testLoadMissingSchema = TestCase $ do
@@ -30,14 +43,13 @@ testIncludeSchema  = TestCase $ do
                                    assertBool "schema should load correctly" (lxml /= (Left SchemaLoadFailure))
 
 main = do 
-        results <- runTestTT $
-                               TestList [TestLabel "loadBlankXML" testLoadXmlDocumentEmpty,
-                               TestLabel "loadExampleFile" testLoadXmlDocument,
-                               TestLabel "loadIncludeSchema" testIncludeSchema,
-                               TestLabel "loadMissingSchema" testLoadMissingSchema,
-                               TestLabel "badRootFailsValidation" testBadRootDocFailsValidation]
-        if (errors results + failures results == 0)
-          then
-            exitWith ExitSuccess
-          else
-            exitWith (ExitFailure 1)
+        results <- runTestTT (
+                               TestList [
+                                 TestLabel "badRootFailsSAXValidation" testBadRootDocFailsSAXValidation,
+                                 TestLabel "loadBlankXML" testLoadXmlDocumentEmpty,
+                                 TestLabel "loadExampleFile" testLoadXmlDocument,
+                                 TestLabel "loadSAXExampleString" testLoadXmlDocumentSAXString,
+                                 TestLabel "loadIncludeSchema" testIncludeSchema,
+                                 TestLabel "loadMissingSchema" testLoadMissingSchema,
+                                 TestLabel "badRootFailsValidation" testBadRootDocFailsValidation ] )
+        return ()

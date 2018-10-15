@@ -98,10 +98,9 @@ validateXmlAgainstSchema sc xdoc = do
                                        _ -> (extractSchemaErrors errs_context) >>= (\x -> return (XmlFailsSchemaValidation x))
 
 validateSAXAgainstSchema :: SchemaValidContextFPtr -> XmlParseBufferFPtr -> IO XmlSchemaValidationResult
-validateXmlAgainstSax sc xbuffer = do
+validateSAXAgainstSchema sc xbuffer = do
                                      errs_context <- new_schema_validation_errors
                                      validate_result <- withForeignPtr sc (\s -> withForeignPtr xbuffer (\d -> runValidationsAgainstSAX s errs_context d))
                                      case validate_result of
                                        0 -> (throwAwayValidationErrors errs_context) >>= (\x -> return XmlIsSchemaValid)
                                        _ -> (extractSchemaErrors errs_context) >>= (\x -> return (XmlFailsSchemaValidation x))
-validateSAXAgainstSchema = undefined

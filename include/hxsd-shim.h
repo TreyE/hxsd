@@ -17,6 +17,7 @@ typedef struct {
 typedef struct {
   xmlParserInputBuffer* buff;
   xmlCharEncoding enc;
+  char not_read;
 } XMLParseBuffer;
 
 xmlDocPtr parseDocString(char* doc_data, int doc_len);

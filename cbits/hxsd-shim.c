@@ -1,4 +1,5 @@
 #include <hxsd-shim.h>
+#include <stdarg.h>
 
 char* hs_get_error_message(SValidationErrors* val_struct, int idx) {
   return(val_struct->errors[idx]);
@@ -26,9 +27,11 @@ SValidationErrors* new_schema_validation_errors() {
 }
 
 void free_schema_validation_errors(SValidationErrors* val_struct) {
-        for (int i = 0; i <= val_struct->error_size- 1; i++) {
-		free((void *)val_struct->errors[i]);
-	}
+  if (val_struct->error_size > 0) {
+    for (int i = 0; i <= val_struct->error_size - 1; i++) {
+		  free((void *)val_struct->errors[i]);
+	  }
+  }
 	free(val_struct);
 }
 
@@ -56,8 +59,24 @@ void add_error_to_context(SValidationErrors* valErrors, const char* err) {
   }
 }
 
+void validityErrorCallbackSAX(void * ctx, const char *format, ...) {
+  char * buff;
+  int result_size;
+  int written_size;
+  va_list args, args_2;
+  va_start(args, format);
+  va_copy(args_2, args);
+  result_size = vsnprintf(NULL, 0, format, args);
+  buff = malloc(result_size + 1);
+  written_size = vsnprintf(buff, result_size + 1, format, args_2);
+  va_end(args);
+  va_end(args_2);
+  add_error_to_context((SValidationErrors*)ctx, buff);
+  free(buff);
+}
+
 void validityErrorCallback(void * ctx, xmlErrorPtr err) {
-	add_error_to_context((SValidationErrors*)ctx, err->message);
+  add_error_to_context((SValidationErrors*)ctx, err->message);
 }
 
 SValidationContext* loadSchemaFromFile(char* file_location) {
@@ -67,7 +86,7 @@ SValidationContext* loadSchemaFromFile(char* file_location) {
   SValidationContext* result = NULL;
   s_parse_result = xmlSchemaNewParserCtxt(file_location);
   if (s_parse_result == NULL) {
-          xmlSchemaFreeParserCtxt(s_parse_result);
+    xmlSchemaFreeParserCtxt(s_parse_result);
 	  return NULL;
   }
   result = (SValidationContext*)malloc(sizeof(SValidationContext));
@@ -97,14 +116,17 @@ int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs,
 }
 
 void freeXMLParseBuffer(XMLParseBuffer* buf) {
-  xmlFreeParserInputBuffer(buf->buff);
+  if (buf->not_read) {
+    xmlFreeParserInputBuffer(buf->buff);
+  }
   free(buf);
 }
 
 XMLParseBuffer * newXMLParseBuffer() {
 	XMLParseBuffer *xml_parse_buffer;
 	xml_parse_buffer = (XMLParseBuffer*)malloc(sizeof(XMLParseBuffer));
-        xml_parse_buffer->enc = XML_CHAR_ENCODING_UTF8;
+  xml_parse_buffer->enc = XML_CHAR_ENCODING_UTF8;
+  xml_parse_buffer->not_read = 1;
 	return xml_parse_buffer;
 }
 
@@ -112,8 +134,8 @@ XMLParseBuffer * newXMLParseBufferFromHaskellMem(const char * mem, int size) {
 	XMLParseBuffer *xml_parse_buffer;
 	xmlParserInputBuffer* buff;
 	xml_parse_buffer = newXMLParseBuffer();
-	buff = xmlParserInputBufferCreateStatic(mem, size, xml_parse_buffer-> enc);
-        if (buff == NULL) {
+	buff = xmlParserInputBufferCreateMem(mem, size, xml_parse_buffer->enc);
+  if (buff == NULL) {
 		free(xml_parse_buffer);
 		return NULL;
 	}
@@ -134,16 +156,52 @@ XMLParseBuffer * newXMLParseBufferFromFilePath(const char * path) {
 	return xml_parse_buffer;
 }
 
+static xmlSAXHandler emptySAXHandlerStruct = {
+    NULL, /* internalSubset */
+    NULL, /* isStandalone */
+    NULL, /* hasInternalSubset */
+    NULL, /* hasExternalSubset */
+    NULL, /* resolveEntity */
+    NULL, /* getEntity */
+    NULL, /* entityDecl */
+    NULL, /* notationDecl */
+    NULL, /* attributeDecl */
+    NULL, /* elementDecl */
+    NULL, /* unparsedEntityDecl */
+    NULL, /* setDocumentLocator */
+    NULL, /* startDocument */
+    NULL, /* endDocument */
+    NULL, /* startElement */
+    NULL, /* endElement */
+    NULL, /* reference */
+    NULL, /* characters */
+    NULL, /* ignorableWhitespace */
+    NULL, /* processingInstruction */
+    NULL, /* comment */
+    NULL, /* xmlParserWarning */
+    NULL, /* xmlParserError */
+    NULL, /* xmlParserError */
+    NULL, /* getParameterEntity */
+    NULL, /* cdataBlock; */
+    NULL, /* externalSubset; */
+    XML_SAX2_MAGIC,
+    NULL,
+    NULL, /* startElementNs */
+    NULL, /* endElementNs */
+    NULL  /* xmlStructuredErrorFunc */
+};
+
 int runValidationsAgainstSAX(SValidationContext* v_ctx, SValidationErrors* errs, XMLParseBuffer* buff) {
   int res;
   xmlSAXHandlerPtr saxHandler;
   xmlSchemaValidCtxtPtr schema_validation_context;
-  saxHandler = (xmlSAXHandlerPtr)malloc(sizeof(xmlSAXHandler));
   schema_validation_context = xmlSchemaNewValidCtxt(v_ctx->schema);
-  xmlSAX2InitDefaultSAXHandler(saxHandler, 0);
-  saxHandler->serror = &validityErrorCallback;
+  saxHandler = &emptySAXHandlerStruct;
+  xmlSchemaSetValidErrors(schema_validation_context, &validityErrorCallbackSAX, &validityErrorCallbackSAX, errs);
+  // Consumes the buffer, so we don't need to free it.
   res = xmlSchemaValidateStream(schema_validation_context, buff->buff, buff->enc, saxHandler, (void *)errs);
+  buff->not_read = 0;
+
   xmlSchemaFreeValidCtxt(schema_validation_context);
-  free(saxHandler);
   return res;
 }
