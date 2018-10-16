@@ -14,6 +14,14 @@ char* hs_get_error_message(SValidationErrors* val_struct, int idx) {
   return(val_struct->errors[idx]->message);
 }
 
+int hs_get_error_line(SValidationErrors* val_struct, int idx) {
+  return(val_struct->errors[idx]->line);
+}
+
+int hs_get_error_col(SValidationErrors* val_struct, int idx) {
+  return(val_struct->errors[idx]->col);
+}
+
 int hs_get_error_count(SValidationErrors* val_struct) {
   return(val_struct->error_size);
 }

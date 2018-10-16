@@ -28,6 +28,8 @@ foreign import ccall "hxsd-shim.h new_schema_validation_errors" new_schema_valid
 foreign import ccall "hxsd-shim.h &free_schema_validation_errors" free_schema_validation_errors :: FinalizerPtr SValidationErrors
 foreign import ccall "hxsd-shim.h hs_get_error_count" hs_get_error_count :: SValidationErrorsPtr -> IO Int
 foreign import ccall "hxsd-shim.h hs_get_error_message" hs_get_error_message :: SValidationErrorsPtr -> Int -> IO CString
+foreign import ccall "hxsd-shim.h hs_get_error_line" hs_get_error_line :: SValidationErrorsPtr -> Int -> IO Int
+foreign import ccall "hxsd-shim.h hs_get_error_col" hs_get_error_col :: SValidationErrorsPtr -> Int -> IO Int
 foreign import ccall "hxsd-shim.h loadSchemaFromFile" loadSchemaFromFile :: CString -> IO SchemaValidContextPtr
 foreign import ccall "hxsd-shim.h runValidationsAgainstDoc" runValidationsAgainstDoc :: SchemaValidContextPtr -> SValidationErrorsPtr -> HXmlDocPtr -> IO Int
 foreign import ccall "hxsd-shim.h &freeXMLParseBuffer" free_xml_parse_buffer :: FinalizerPtr XmlParseBuffer
@@ -35,12 +37,20 @@ foreign import ccall "hxsd-shim.h newXMLParseBufferFromFilePath" new_xml_parse_b
 foreign import ccall "hxsd-shim.h newXMLParseBufferFromHaskellMem" new_xml_parse_buffer_from_string :: CString -> Int -> IO XmlParseBufferPtr
 foreign import ccall "hxsd-shim.h runValidationsAgainstSAX" runValidationsAgainstSAX :: SchemaValidContextPtr -> SValidationErrorsPtr -> XmlParseBufferPtr -> IO Int
 
-copyErrorsToList :: Int -> SValidationErrorsPtr -> IO [String]
+copyErrorsToList :: Int -> SValidationErrorsPtr -> IO [XmlSchemaValidationError]
 copyErrorsToList i svep = case i of
                             0 -> return []
-                            errs -> mapM (\x -> ((hs_get_error_message svep x) >>= peekCString)) ([0..(errs - 1)])
+                            errs -> mapM (\x -> extractErrorFromValidationErrorsPtr x svep) ([0..(errs - 1)])
 
-extractSchemaErrors :: SValidationErrorsPtr -> IO [String]
+extractErrorFromValidationErrorsPtr :: Int -> SValidationErrorsPtr -> IO XmlSchemaValidationError
+extractErrorFromValidationErrorsPtr i svep = do
+                                               msg_ptr <- hs_get_error_message svep i
+                                               msg <- peekCString msg_ptr
+                                               line_no <- hs_get_error_line svep i
+                                               col_no <- hs_get_error_col svep i
+                                               return $ XmlSchemaValidationError msg line_no col_no
+
+extractSchemaErrors :: SValidationErrorsPtr -> IO [XmlSchemaValidationError]
 extractSchemaErrors svep = do
                              ec <- hs_get_error_count svep
                              rv <- copyErrorsToList ec svep

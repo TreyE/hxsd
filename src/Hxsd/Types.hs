@@ -3,8 +3,14 @@ module Hxsd.Types where
 data XmlParsingFailure = XmlParsingFailure deriving Eq
 data SchemaLoadFailure = SchemaLoadFailure deriving Eq
 
+data XmlSchemaValidationError = XmlSchemaValidationError
+                                   String -- Message
+                                   Int -- Line
+                                   Int -- Column
+                                   deriving(Eq, Show)
+
 data XmlSchemaValidationResult = XmlIsSchemaValid
-                                 | XmlFailsSchemaValidation [String]
+                                 | XmlFailsSchemaValidation [XmlSchemaValidationError]
 
 data XmlAgainstSchemaFileResult = XmlSchemaValidationCompleted XmlSchemaValidationResult
                                   | XmlDataParseFailure XmlParsingFailure

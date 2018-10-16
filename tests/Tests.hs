@@ -10,7 +10,7 @@ import Control.Exception(try, displayException, IOException, SomeException)
 
 testBadRootDocFailsValidation = TestCase $ do
                                   (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
-                                  (Right lxml) <- parseXmlString "<root></root>"
+                                  (Right lxml) <- parseXmlString "<person_name xmlns=\"http://garbage.hxsd.org/api/terms/1.0\">\n    <frank/>\n</person_name>"
                                   (XmlFailsSchemaValidation errs) <- validateXmlAgainstSchema lxsd lxml
                                   assertBool "should have errors" (errs /= [])
 
