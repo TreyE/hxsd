@@ -6,8 +6,14 @@
 #include <libxml/xmlschemas.h>
 
 typedef struct {
+  char *message;
+  int col;
+  int line;
+} SValError;
+
+typedef struct {
   int error_size;
-  char **errors;
+  SValError** errors;
 } SValidationErrors;
 
 typedef struct {

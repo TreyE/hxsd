@@ -1,8 +1,17 @@
 #include <hxsd-shim.h>
 #include <stdarg.h>
 
+SValError* createSValErrorFrom(xmlErrorPtr xmlerr) {
+  SValError* sve;
+  sve = malloc(sizeof(SValError));
+  sve->message = strdup(xmlerr->message);
+  sve->line = xmlerr->line;
+  sve->col = xmlerr->int2;
+  return(sve);
+}
+
 char* hs_get_error_message(SValidationErrors* val_struct, int idx) {
-  return(val_struct->errors[idx]);
+  return(val_struct->errors[idx]->message);
 }
 
 int hs_get_error_count(SValidationErrors* val_struct) {
@@ -13,7 +22,7 @@ xmlDocPtr parseDocString(char* doc_data, int doc_len) {
   xmlDocPtr docPtr;
   docPtr = xmlReadMemory(doc_data, doc_len, NULL, NULL, 0);
   if (docPtr == NULL) {
-          xmlFreeDoc(docPtr);
+    xmlFreeDoc(docPtr);
 	  return NULL;
   }
   return docPtr;
@@ -29,7 +38,8 @@ SValidationErrors* new_schema_validation_errors() {
 void free_schema_validation_errors(SValidationErrors* val_struct) {
   if (val_struct->error_size > 0) {
     for (int i = 0; i <= val_struct->error_size - 1; i++) {
-		  free((void *)val_struct->errors[i]);
+		  free(val_struct->errors[i]->message);
+      free(val_struct->errors[i]);
 	  }
   }
 	free(val_struct);
@@ -39,28 +49,29 @@ void free_schema_validation_errors(SValidationErrors* val_struct) {
  * We need to make a copy of the string pointer -
  * it will go away when we free the context
  */
-void add_error_to_context(SValidationErrors* valErrors, const char* err) {
+void add_error_to_context(SValidationErrors* valErrors, xmlErrorPtr err) {
+
   int error_count = valErrors->error_size;
-  char** all_errors = valErrors->errors;
+  SValError** all_errors;
   int new_error_size = error_count + 1;
   valErrors->error_size = new_error_size;
-  char* new_error = strdup(err);
   if (error_count == 0) {
-	  valErrors->errors = (char**)calloc(1,sizeof(char*));
-	  valErrors->errors[0] = new_error;
+	  valErrors->errors = (SValError**)calloc(1,sizeof(SValError*));
+	  valErrors->errors[0] = createSValErrorFrom(err);
   } else {
+    all_errors = valErrors->errors;
 	  valErrors->error_size = new_error_size;
-	  char **new_ptr = (char**)calloc(new_error_size, sizeof(char*));
-	  int copy_size = error_count * sizeof(char*);
+	  SValError** new_ptr = (SValError**)calloc(new_error_size, sizeof(SValError*));
+	  int copy_size = error_count * sizeof(SValError*);
 	  valErrors->errors = new_ptr;
 	  memcpy(new_ptr,all_errors,copy_size);
 	  free(all_errors);
-	  valErrors->errors[error_count] = new_error;
+    valErrors->errors[error_count] = createSValErrorFrom(err);
   }
 }
 
 void validityErrorCallback(void * ctx, xmlErrorPtr err) {
-  add_error_to_context((SValidationErrors*)ctx, err->message);
+  add_error_to_context((SValidationErrors*)ctx, err);
 }
 
 SValidationContext* loadSchemaFromFile(char* file_location) {
