@@ -18,7 +18,6 @@ testBadSAXParseFailsSAXValidation = TestCase $ do
                                     (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
                                     (Right lxml) <- parseStreamingXmlString "<root</root>"
                                     (XmlFailsSchemaValidation errs) <- validateSAXAgainstSchema lxsd lxml
-                                    putStrLn (show errs)
                                     assertBool "should have errors" (errs /= [])
 
 testBadRootDocFailsSAXValidation = TestCase $ do
