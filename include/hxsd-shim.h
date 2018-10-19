@@ -23,7 +23,7 @@ typedef struct {
 typedef struct {
   xmlParserInputBuffer* buff;
   xmlCharEncoding enc;
-  char not_read;
+  char notString;
 } XMLParseBuffer;
 
 xmlDocPtr parseDocString(char* doc_data, int doc_len);
@@ -34,9 +34,11 @@ void freeSValidationContext(SValidationContext* ctx);
 SValidationErrors* new_schema_validation_errors();
 void free_schema_validation_errors(SValidationErrors* val_struct);
 
-char* hs_get_error_message(SValidationErrors* val_struct, int idx);
+char* hs_get_error_message(int idx, SValidationErrors* val_struct);
 
 int hs_get_error_count(SValidationErrors* val_struct);
+int hs_get_error_line(int idx, SValidationErrors* val_struct);
+int hs_get_error_col(int idx, SValidationErrors* val_struct);
 int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs, xmlDocPtr doc);
 
 XMLParseBuffer * newXMLParseBufferFromHaskellMem(const char * mem, int size);

@@ -18,3 +18,16 @@ data XmlAgainstSchemaFileResult = XmlSchemaValidationCompleted XmlSchemaValidati
 
 type XmlParsingResult a = Either XmlParsingFailure a
 type SchemaLoadResult a = Either SchemaLoadFailure a
+
+mConsTransform2 :: Monad m => ((inType -> m a),(inType -> m b)) -> (a -> b -> builtType) -> inType -> m builtType
+mConsTransform2 (f1, f2) c x = do
+                                 a_val <- f1 x
+                                 b_val <- f2 x
+                                 return $ c a_val b_val
+
+mConsTransform3 :: Monad m => ((inType -> m a),(inType -> m b), (inType -> m c)) -> (a -> b -> c -> builtType) -> inType -> m builtType
+mConsTransform3 (f1, f2, f3) c x = do
+                                 a_val <- f1 x
+                                 b_val <- f2 x
+                                 c_val <- f3 x
+                                 return $ c a_val b_val c_val

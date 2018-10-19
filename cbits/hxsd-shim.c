@@ -10,15 +10,15 @@ SValError* createSValErrorFrom(xmlErrorPtr xmlerr) {
   return(sve);
 }
 
-char* hs_get_error_message(SValidationErrors* val_struct, int idx) {
+char* hs_get_error_message(int idx, SValidationErrors* val_struct) {
   return(val_struct->errors[idx]->message);
 }
 
-int hs_get_error_line(SValidationErrors* val_struct, int idx) {
+int hs_get_error_line(int idx, SValidationErrors* val_struct) {
   return(val_struct->errors[idx]->line);
 }
 
-int hs_get_error_col(SValidationErrors* val_struct, int idx) {
+int hs_get_error_col(int idx, SValidationErrors* val_struct) {
   return(val_struct->errors[idx]->col);
 }
 
@@ -119,7 +119,7 @@ int runValidationsAgainstDoc(SValidationContext* v_ctx, SValidationErrors* errs,
 }
 
 void freeXMLParseBuffer(XMLParseBuffer* buf) {
-  if (buf->not_read) {
+  if (buf->notString) {
     xmlFreeParserInputBuffer(buf->buff);
   }
   free(buf);
@@ -129,7 +129,6 @@ XMLParseBuffer * newXMLParseBuffer() {
 	XMLParseBuffer *xml_parse_buffer;
 	xml_parse_buffer = (XMLParseBuffer*)malloc(sizeof(XMLParseBuffer));
   xml_parse_buffer->enc = XML_CHAR_ENCODING_UTF8;
-  xml_parse_buffer->not_read = 1;
 	return xml_parse_buffer;
 }
 
@@ -138,6 +137,7 @@ XMLParseBuffer * newXMLParseBufferFromHaskellMem(const char * mem, int size) {
 	xmlParserInputBuffer* buff;
 	xml_parse_buffer = newXMLParseBuffer();
 	buff = xmlParserInputBufferCreateMem(mem, size, xml_parse_buffer->enc);
+  xml_parse_buffer->notString = 0;
   if (buff == NULL) {
 		free(xml_parse_buffer);
 		return NULL;
@@ -151,7 +151,8 @@ XMLParseBuffer * newXMLParseBufferFromFilePath(const char * path) {
 	xmlParserInputBuffer* buff;
 	xml_parse_buffer = newXMLParseBuffer();
 	buff = xmlParserInputBufferCreateFilename(path, xml_parse_buffer->enc);
-        if (buff == NULL) {
+  xml_parse_buffer->notString = 1;
+  if (buff == NULL) {
 		free(xml_parse_buffer);
 		return NULL;
 	}
@@ -194,6 +195,22 @@ xmlSAXHandler emptySAXHandlerStruct = {
     NULL  /* xmlStructuredErrorFunc */
 };
 
+xmlError parsingFailedError = {
+    XML_FROM_PARSER,	// What part of the library raised this er
+    XML_ERR_INTERNAL_ERROR,	// The error code, e.g. an xmlParserError
+    "Parsing Failed",	// human-readable informative error messag
+    XML_ERR_FATAL,	// how consequent is the error
+    NULL,	// the filename
+    1,	// the line number if available
+    NULL,	// extra string information
+    NULL,	// extra string information
+    NULL,	// extra string information
+    0,	// extra number information
+    1,	// error column # or 0 if N/A (todo: renam
+    NULL,	// the parser context if available
+    NULL	// the node in the tree
+};
+
 int runValidationsAgainstSAX(SValidationContext* v_ctx, SValidationErrors* errs, XMLParseBuffer* buff) {
   int res;
   xmlSAXHandlerPtr saxHandler;
@@ -203,7 +220,10 @@ int runValidationsAgainstSAX(SValidationContext* v_ctx, SValidationErrors* errs,
   xmlSchemaSetValidStructuredErrors(schema_validation_context, &validityErrorCallback, (void *)errs);
   // Consumes the buffer, so we don't need to free it.
   res = xmlSchemaValidateStream(schema_validation_context, buff->buff, buff->enc, saxHandler, (void *)errs);
-  buff->not_read = 0;
+  if (res == -1) {
+    validityErrorCallback(errs, &parsingFailedError);
+  }
+  //fprintf(stderr, "\nResult: %d\n", res);
   xmlSchemaFreeValidCtxt(schema_validation_context);
   return res;
 }

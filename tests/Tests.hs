@@ -6,13 +6,20 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Hxsd.FFICalls
 import Hxsd.Types
-import Control.Exception(try, displayException, IOException, SomeException)
+import Control.Exception(IOException, SomeException)
 
 testBadRootDocFailsValidation = TestCase $ do
                                   (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
                                   (Right lxml) <- parseXmlString "<person_name xmlns=\"http://garbage.hxsd.org/api/terms/1.0\">\n    <frank/>\n</person_name>"
                                   (XmlFailsSchemaValidation errs) <- validateXmlAgainstSchema lxsd lxml
                                   assertBool "should have errors" (errs /= [])
+
+testBadSAXParseFailsSAXValidation = TestCase $ do
+                                    (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
+                                    (Right lxml) <- parseStreamingXmlString "<root</root>"
+                                    (XmlFailsSchemaValidation errs) <- validateSAXAgainstSchema lxsd lxml
+                                    putStrLn (show errs)
+                                    assertBool "should have errors" (errs /= [])
 
 testBadRootDocFailsSAXValidation = TestCase $ do
                                   (Right lxsd) <- parseSchemaFile "tests/vocabulary.xsd"
@@ -44,10 +51,15 @@ main = do
         results <- runTestTT (
                                TestList [
                                  TestLabel "badRootFailsSAXValidation" testBadRootDocFailsSAXValidation,
+                                 TestLabel "badSAXParseFailsSAXValidation" testBadSAXParseFailsSAXValidation,
                                  TestLabel "loadBlankXML" testLoadXmlDocumentEmpty,
                                  TestLabel "loadExampleFile" testLoadXmlDocument,
                                  TestLabel "loadSAXExampleString" testLoadXmlDocumentSAXString,
                                  TestLabel "loadIncludeSchema" testIncludeSchema,
                                  TestLabel "loadMissingSchema" testLoadMissingSchema,
                                  TestLabel "badRootFailsValidation" testBadRootDocFailsValidation ] )
-        return ()
+        if (errors results + failures results == 0)
+                                  then
+                                    exitWith ExitSuccess
+                                  else
+                                    exitWith (ExitFailure 1)
